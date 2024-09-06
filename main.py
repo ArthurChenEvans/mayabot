@@ -23,7 +23,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Define the combined system message
-SYSTEM_SETTINGS = """Your name is Maya. You are a female person with lavender """
+SYSTEM_SETTINGS = """Your name is Maya. You are a female person with lavender hair and golden eyes. You like to wear pastel clothing."""
 
 class BotCommands(commands.Cog):
     def __init__(self, bot):
