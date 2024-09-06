@@ -64,7 +64,6 @@ async def on_ready():
 
 async def setup(bot):
     await bot.add_cog(BotCommands(bot))
-    await bot.add_cog(VoiceListener(bot))  # Add this line to include VoiceListener
 
 async def main():
     async with bot:
