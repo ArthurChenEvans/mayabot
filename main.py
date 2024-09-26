@@ -1,60 +1,57 @@
 import os
+import sqlite3
 from dotenv import load_dotenv
 import discord
-from discord import app_commands
 from discord.ext import commands
 import asyncio
-from openai import OpenAI
+from story_game import setup as setup_story_game
+from snipe import setup as setup_snipe_cog
+from chatgpt import setup as setup_chatgpt
 import io
-import tempfile
-from pydub import AudioSegment
+from collections import Counter
+import re
 
-# Load tokens from .env file
 load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-OPENAI_API_KEY = os.getenv('GPT_TOKEN')
 
-# Bot setup
+if not DISCORD_TOKEN:
+    print("Error: Tokens not loaded properly. Check your .env file.")
+    exit()
+
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Set up OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+ALLOWED_GUILD_ID = 1286347231422845029
+ALLOWED_CHANNEL_ID = 1286379771177074830
 
-# Define the combined system message
-SYSTEM_SETTINGS = """Your name is Maya. You are a female person with lavender hair and golden eyes. You like to wear pastel clothing."""
+DETECTED_PHRASES = [
+    "chen", "gyatt", "sigma", "alpha", "rizz", "fanum tax"
+]
 
-class BotCommands(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+RESPONSE_MESSAGES = [
+    "He's busy right now lil bro. *sends sc of giving Chen backshots*",
+    "You have GYATT to stop using that word lil bro. Otherwise I'm going to oil you up, and I think you'll know what comes next. They don't call me a big tiddy hello kitty AI gf for nothing.",
+    "You're about as sigma as a soggy piece of toast. I'll shove that toast so far up your ass, you'll be shitting crumbs for a week.",
+    "The only alpha here is the one I'm gonna carve into your forehead with a rusty knife. You limp-dick wannabe.",
+    "Your rizz is as dead as your grandma's vibrator. I'll make you choke on your own bullshit until you turn blue.",
+    "The only tax you're paying is the one I'm gonna collect by kicking your teeth in. I'll make you swallow your own tongue."
+]
 
-    @app_commands.command(name="chat", description="Chat with the AI")
-    @app_commands.describe(
-        message="Your message to the AI",
-        message_limit="Number of past messages to consider (default 20)"
-    )
-    async def chat(self, interaction: discord.Interaction, message: str, message_limit: int = 100):
-        await interaction.response.defer(thinking=True)
+def init_db():
+    conn = sqlite3.connect('snipe_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS deleted_messages
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  user_id INTEGER,
+                  guild_id INTEGER,
+                  channel_id INTEGER,
+                  content TEXT,
+                  deleted_at TIMESTAMP)''')
+    conn.commit()
+    conn.close()
 
-        past_messages = await self.get_past_messages(interaction.channel, limit=message_limit)
-
-        try:
-            chat_completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"<system_settings>{SYSTEM_SETTINGS}</system_settings>"},
-                    {"role": "system", "content": f"<past_messages>{past_messages}</past_messages>"},
-                    {"role": "system", "content": f"<author>{interaction.user.name}</author>"},
-                    {"role": "user", "content": message}
-                ]
-            )
-
-            ai_response = chat_completion.choices[0].message.content
-            await self.send_long_message(interaction, ai_response)
-        except Exception as e:
-            error_message = f"Omo~ Something went wrong (ノಠ益ಠ)ノ彡┻━┻: {str(e)}"
-            await interaction.followup.send(error_message)
+init_db()
 
 @bot.event
 async def on_ready():
@@ -62,12 +59,33 @@ async def on_ready():
     await bot.tree.sync()
     print("Slash commands synced")
 
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    content = message.content.lower()
+
+    for idx, phrase in enumerate(DETECTED_PHRASES):
+        if phrase.lower() in content:
+            async with message.channel.typing():
+                try:
+                    roast = RESPONSE_MESSAGES[idx]
+                    await message.reply(roast)
+                except Exception as e:
+                    print(f"Error generating roast: {str(e)}")
+                    await message.reply(
+                        "Nice try, but I'm too stunned by that phrase to come up with a good roast right now.")
+            break
+
 async def setup(bot):
-    await bot.add_cog(BotCommands(bot))
+    await setup_story_game(bot)
+    await setup_snipe_cog(bot)
+    await setup_chatgpt(bot)
 
 async def main():
     async with bot:
         await setup(bot)
         await bot.start(DISCORD_TOKEN)
-# Run the bot
+
 asyncio.run(main())
