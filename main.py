@@ -7,9 +7,7 @@ import asyncio
 from story_game import setup as setup_story_game
 from snipe import setup as setup_snipe_cog
 from chatgpt import setup as setup_chatgpt
-import io
-from collections import Counter
-import re
+from study_help import setup as setup_study_help
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
@@ -82,6 +80,7 @@ async def setup(bot):
     await setup_story_game(bot)
     await setup_snipe_cog(bot)
     await setup_chatgpt(bot)
+    await setup_study_help(bot)
 
 async def main():
     async with bot:
